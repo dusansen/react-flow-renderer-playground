@@ -1,0 +1,9 @@
+.flow-page {
+    height: 100vh;
+    display: grid;
+    grid-template-columns: 1fr 300px;
+}
+
+.react-flow-area {
+    padding: 20px;
+}

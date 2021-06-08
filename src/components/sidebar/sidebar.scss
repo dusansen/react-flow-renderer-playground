@@ -1,0 +1,9 @@
+.sidebar {
+    background-color: #FAFAFA;
+
+    .widget-list {
+        display: grid;
+        grid-template-columns: 1fr;
+        justify-content: center;
+    }
+}

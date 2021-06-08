@@ -1,0 +1,38 @@
+.if-node {
+    width: 50px;
+    height: 50px;
+    background-color: red;
+    transform: rotate(45deg);
+    border: 2px solid #29ABE2;
+    background-color: #FFFFFF;
+
+    .react-flow__handle {
+        border: 1px solid #29ABE2;
+        background-color: #FFFFFF;
+    }
+
+    .react-flow__handle-top {
+        left: 0;
+    }
+
+    .react-flow__handle-bottom {
+        left: 100%;
+    }
+
+    .react-flow__handle-left {
+        top: 100%;
+    }
+
+    .react-flow__handle-right {
+        top: 0;
+    }
+
+    .if-label {
+        display: block;
+        color: #29ABE2;
+        line-height: 50px;
+        transform: rotate(-45deg);
+        font-size: 16px;
+        font-weight: 500;
+    }
+}
