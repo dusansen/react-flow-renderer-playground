@@ -1,5 +1,5 @@
 import React, { ReactElement, useState, useRef, useEffect } from 'react'
-import ReactFlow, { Background, FlowElement, OnLoadParams, Edge, isEdge, Connection, Node, Elements, getIncomers, isNode, BackgroundVariant } from 'react-flow-renderer';
+import ReactFlow, { Background, MiniMap, Controls, FlowElement, OnLoadParams, Edge, isEdge, Connection, Node, Elements, getIncomers, isNode, BackgroundVariant } from 'react-flow-renderer';
 import CustomEdge from '../../components/custom-edge/CustomEdge';
 import CustomNode from '../../components/custom-node/CustomNode';
 import FlowPath from '../../components/flow-path/FlowPath';
@@ -11,6 +11,9 @@ import Widget1 from '../../components/widgets/Widget1';
 import Widget2 from '../../components/widgets/Widget2';
 import dagre from 'dagre';
 import './react-flow-renderer.scss';
+import { edges1, nodes1 } from '../../test_data/test1';
+import { edges2, nodes2 } from '../../test_data/test2';
+import { edges3, nodes3 } from '../../test_data/test3';
 
 const WIDGET_HEIGHT = 50;
 const CURSOR_HEIGHT = 20;
@@ -31,31 +34,8 @@ export default function ReactFlowRenderer(): ReactElement {
     const [showWorkflowOptions, setShowWorkflowOptions] = useState(false);
     const [optionsStyles, setOptionsStyles] = useState({ x: 0, y: 0 });
     const [reactFlowInstance, setReactFlowInstance] = useState<OnLoadParams<any> | null>(null);
-    const [nodes, setNodes] = useState<Node<INodeData>[]>([
-        {
-            id: 'start',
-            type: 'custom',
-            data: { label: 'Start', path: '1', nodeWidth: 100 },
-            draggable: true,
-            position: { x: 0, y: 0 }
-        },
-        {
-            id: 'end',
-            type: 'custom',
-            data: { label: 'End', path: '1', nodeWidth: 100 },
-            draggable: true,
-            position: { x: 0, y: 0 }
-        }
-    ]);
-    const [edges, setEdges] = useState<Edge[]>([
-        {
-            id: 'estart-end',
-            source: 'start',
-            target: 'end',
-            type: 'smoothstep',
-            label: 'Add'
-        }
-    ]);
+    const [nodes, setNodes] = useState<Node<INodeData>[]>(nodes3);
+    const [edges, setEdges] = useState<Edge[]>(edges3);
     const [elements, setElements] = useState<Elements>([]);
 
     const getNewPathEdges = (
@@ -307,9 +287,11 @@ export default function ReactFlowRenderer(): ReactElement {
         if (!type) {
             return;
         }
-        const pathId = getPathId(event.clientX, event.clientY);
-        console.log('onDrop pathId: ', pathId);
-        const { nodeAboveIndex, nodeBelowIndex } = getSurroundingNodesIndex(event.clientX, event.clientY, pathId);
+        console.log('ondrop: ', event.clientX, event.clientY, reactFlowInstance);
+        const projected = reactFlowInstance?.project({x: event.clientX, y: event.clientY });
+        const pathId = getPathId(projected?.x || 0, projected?.y || 0);
+        // console.log('onDrop pathId: ', pathId);
+        const { nodeAboveIndex, nodeBelowIndex } = getSurroundingNodesIndex(projected?.x || 0, projected?.y || 0, pathId);
         if (nodeAboveIndex === -1 || nodeBelowIndex === -1) {
             console.log('DROP FAILED');
             return;
@@ -318,7 +300,7 @@ export default function ReactFlowRenderer(): ReactElement {
         const newConnections = createNewNodeConnections(nodeAboveIndex, nodeBelowIndex, newNode);
         const newNodes = [...nodes, newNode];
         const layoutedElements = getLayoutedElements(newNodes, newConnections);
-        console.log('layoutedElements: ', layoutedElements);
+        // console.log('layoutedElements: ', layoutedElements);
         setNodes(newNodes);
         setEdges(newConnections);
         setElements(layoutedElements);
@@ -364,13 +346,36 @@ export default function ReactFlowRenderer(): ReactElement {
             }
             graph.setEdge(el.source, el.target, { label: el.id })
         });
-        console.log({ graph });
         dagre.layout(graph);
+
+        const mostLeftOnRight = nodes.reduce((acc, val) => {
+            if (val.id.startsWith('r')) {
+                return acc;
+            }
+            const elX = graph.node(val.id).x;
+            return elX > acc ? elX : acc;
+        }, 0);
+
+        console.log('mostLeftOnRight, ', mostLeftOnRight); 
+
+        const start = graph.node('start').x;
+        console.log('start: ', start);
+        const move = mostLeftOnRight - start + 400;
+
+        const mostChars = nodes.reduce((acc, val) => {
+            if (val.id.startsWith('r')) {
+                return acc;
+            }
+            if (val.id.length > acc) {
+                return val.id.length;
+            }
+            return acc;
+        }, 1);
+        console.log('mostChars: ', mostChars);
 
         return [...nodes, ...edges].map(el => {
             if (isNode(el)) {
                 const nodeWithPosition = graph.node(el.id);
-                console.log(el.id, nodeWithPosition);
                 if (el.type === 'path') {
                     el.style = {
                         width: nodeWithPosition.width,
@@ -379,8 +384,10 @@ export default function ReactFlowRenderer(): ReactElement {
                 }
                 if (isNode(el)) {
                     el.position = {
-                        // x: nodeWithPosition.x - (el.data ? el.data?.nodeWidth / 2 : 100 / 2) + Math.random() / 1000,
-                        x: nodeWithPosition.x - nodeWithPosition.width / 2 + Math.random() / 1000,
+                        x: el.id.startsWith('l')
+                        ? nodeWithPosition.x - move // + ((mostChars - el.id.length) * 225)
+                        : nodeWithPosition.x - (el.data ? el.data?.nodeWidth / 2 : 100 / 2) + Math.random() / 1000,
+                        // x: nodeWithPosition.x - nodeWithPosition.width / 2 + Math.random() / 1000,
                         y: nodeWithPosition.y
                     }
                 }
@@ -420,7 +427,12 @@ export default function ReactFlowRenderer(): ReactElement {
                     onDragOver={onDragOver}
                     onNodeDragStart={onNodeDragStart}
                     onNodeDragStop={onNodeDragStop}
+                    minZoom={0.3}
                 >
+                    <MiniMap
+                        nodeBorderRadius={2}
+                    />
+                    <Controls />
                     <Background
                         variant={BackgroundVariant.Dots}
                         gap={20}
