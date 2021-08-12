@@ -7,7 +7,7 @@ function App() {
     <div className="App">
       <Router>
         <Switch>
-          <Route path='/react-flow-renderer'>
+          <Route path='/'>
             <ReactFlowRenderer />
           </Route>
         </Switch>

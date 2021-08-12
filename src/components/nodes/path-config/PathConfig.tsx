@@ -1,13 +1,12 @@
-import React, { ReactElement } from 'react';
+import React, { ReactElement } from 'react'
 import { Handle, Position } from 'react-flow-renderer';
-import { CustomNodeProps } from '../../interfaces/interfaces';
-import './widget1.scss'
+import { CustomNodeProps } from '../../../interfaces/interfaces';
+import './path-config.scss'
 
-export default function Widget2({ data, showConnectionDots = true, onDragStart }: CustomNodeProps): ReactElement {
+export default function PathConfig({ data, showConnectionDots = true, onDragStart }: CustomNodeProps): ReactElement {
     return (
-        <div draggable={!data.isInFlow} className='widget2' onDragStart={event => onDragStart(event, 'widget2')}>
-            <div className='widget-title'>Widget 2</div>
-            <div>{data.label}</div>
+        <div draggable={!data.isInFlow} className='path-config' onDragStart={event => onDragStart(event, 'path-config')}>
+            <div className='path-label'>{data.label}</div>
             {showConnectionDots && (
                 <>
                     <Handle

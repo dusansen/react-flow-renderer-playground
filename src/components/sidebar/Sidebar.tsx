@@ -1,6 +1,6 @@
 import React, { ReactElement } from 'react';
-import Widget1 from '../widgets/Widget1';
-import Widget2 from '../widgets/Widget2';
+import Task1 from '../nodes/task1/Task1';
+import Task2 from '../nodes/task2/Task2';
 import './sidebar.scss';
 
 const onDragStart = (event: React.DragEvent<HTMLDivElement>, name: string) => {
@@ -9,12 +9,22 @@ const onDragStart = (event: React.DragEvent<HTMLDivElement>, name: string) => {
     console.log('onDragStart: ', name);
 };
 
-const props = {
-    id: 'widget1',
-    type: 'widget1',
+const props1 = {
+    id: 'task1',
+    type: 'task-1',
     selected: false,
     isConnectable: false,
-    data: { label: 'widget 1 description'},
+    data: { label: 'Filter a list of targets recived based on advanced filter criteria to pass to subsequent tasks.'},
+    onDragStart,
+    showConnectionDots: false
+};
+
+const props2 = {
+    id: 'task2',
+    type: 'task-2',
+    selected: false,
+    isConnectable: false,
+    data: { label: 'Filter a list of targets recived based on advanced filter criteria to pass to subsequent tasks.'},
     onDragStart,
     showConnectionDots: false
 };
@@ -24,8 +34,8 @@ export default function Sidebar(): ReactElement {
         <aside className='sidebar'>
             <h3>Widgets</h3>
             <div className="widget-list">
-                <Widget1 {...props} />
-                <Widget2 {...props} id='widget2' type='widget2' />
+                <Task1 {...props1} />
+                <Task2 {...props2} />
             </div>
         </aside>
     )

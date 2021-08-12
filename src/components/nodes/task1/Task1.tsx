@@ -1,13 +1,13 @@
 import React, { ReactElement } from 'react'
 import { Handle, Position } from 'react-flow-renderer';
-import { CustomNodeProps } from '../../interfaces/interfaces';
-import './widget1.scss'
+import { CustomNodeProps } from '../../../interfaces/interfaces';
+import './task-1.scss'
 
-export default function Widget1({ data, showConnectionDots = true, onDragStart }: CustomNodeProps): ReactElement {
+export default function Task1({ data, showConnectionDots = true, onDragStart }: CustomNodeProps): ReactElement {
     return (
-        <div draggable={!data.isInFlow} className='widget1' onDragStart={event => onDragStart(event, 'widget1')}>
-            <div className='widget-title'>Widget 1</div>
-            <div>{data.label}</div>
+        <div draggable={!data.isInFlow} className='task1' onDragStart={event => onDragStart(event, 'task1')}>
+            <div className='task-title'>Task 1</div>
+            <div className="task-description">{data.label}</div>
             {showConnectionDots && (
                 <>
                     <Handle

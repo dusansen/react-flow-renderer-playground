@@ -1,0 +1,19 @@
+.placeholder {
+  background-color: #29ABE2;
+  width: 30px;
+  height: 30px;
+  border-radius: 50%;
+
+  .react-flow__handle {
+    background-color: #29ABE2;
+    border: none;
+  }
+
+  .react-flow__handle-top {
+    background: red;
+  }
+
+  .react-flow__handle-bottom {
+    background: green;
+  }
+}

@@ -3,21 +3,30 @@ import ReactFlow, { Background, MiniMap, Controls, FlowElement, OnLoadParams, Ed
 import CustomEdge from '../../components/custom-edge/CustomEdge';
 import CustomNode from '../../components/custom-node/CustomNode';
 import FlowPath from '../../components/flow-path/FlowPath';
-import IfNode from '../../components/if-node/IfNode';
+import IfNode from '../../components/nodes/if-node/IfNode';
 import LoopNode from '../../components/loop-node/LoopNode';
 import Options from '../../components/options/Options';
 import Sidebar from '../../components/sidebar/Sidebar';
-import Widget1 from '../../components/widgets/Widget1';
-import Widget2 from '../../components/widgets/Widget2';
 import dagre from 'dagre';
 import './react-flow-renderer.scss';
 import { edges1, nodes1 } from '../../test_data/test1';
 import { edges2, nodes2 } from '../../test_data/test2';
 import { edges3, nodes3 } from '../../test_data/test3';
+import { NODES, EDGES } from '../../test_data/simple_test';
+import InitialNode from '../../components/nodes/initial/InitialNode';
+import Task1 from '../../components/nodes/task1/Task1';
+import Task2 from '../../components/nodes/task2/Task2';
+import PathConfig from '../../components/nodes/path-config/PathConfig';
+import Placeholder from '../../components/nodes/placeholder/Placeholder';
 
-const WIDGET_HEIGHT = 50;
+const TASK_NODE_WIDTH = 400;
+const TASK_NODE_HEIGHT = 96;
+const IF_NODE_WIDTH = 40;
+const IF_NODE_HEIGHT = 40;
 const CURSOR_HEIGHT = 20;
 const PATH_MARGIN = 20;
+const PATH_CONFIG_NODE_WIDTH = 100;
+const PLACEHOLDER_NODE_WIDTH = 5;
 
 const MAIN_PATH_ID = '1';
 
@@ -34,15 +43,15 @@ export default function ReactFlowRenderer(): ReactElement {
     const [showWorkflowOptions, setShowWorkflowOptions] = useState(false);
     const [optionsStyles, setOptionsStyles] = useState({ x: 0, y: 0 });
     const [reactFlowInstance, setReactFlowInstance] = useState<OnLoadParams<any> | null>(null);
-    const [nodes, setNodes] = useState<Node<INodeData>[]>(nodes3);
-    const [edges, setEdges] = useState<Edge[]>(edges3);
+    const [nodes, setNodes] = useState<Node<INodeData>[]>(NODES);
+    const [edges, setEdges] = useState<Edge[]>(EDGES);
     const [elements, setElements] = useState<Elements>([]);
 
     const getNewPathEdges = (
         aboveNodeId: string,
         bellowNodeId: string,
         ifNode: Node<INodeData>,
-        newPathNodes: Node<INodeData>[]
+        pathConfigNodes: Node<INodeData>[]
     ) => ([
         {
             id: `e${aboveNodeId}-${ifNode.id}`,
@@ -52,34 +61,46 @@ export default function ReactFlowRenderer(): ReactElement {
             label: 'Add'
         },
         {
-            id: `e${ifNode.id}-${newPathNodes[0].id}`,
+            id: `e${ifNode.id}1-${pathConfigNodes[0].id}`,
             source: ifNode.id,
-            target: newPathNodes[0].id,
+            sourceHandle: '1',
+            target: pathConfigNodes[0].id,
             type: 'smoothstep'
         },
         {
-            id: `e${ifNode.id}-${newPathNodes[1].id}`,
+            id: `e${ifNode.id}2-${pathConfigNodes[1].id}`,
             source: ifNode.id,
-            target: newPathNodes[1].id,
+            sourceHandle: '2',
+            target: pathConfigNodes[1].id,
             type: 'smoothstep'
         },
         {
-            id: `e${newPathNodes[0].id}-${bellowNodeId}`,
-            source: newPathNodes[0].id,
+            id: `e${pathConfigNodes[0].id}-${pathConfigNodes[2].id}`,
+            source: pathConfigNodes[0].id,
+            target: pathConfigNodes[2].id,
+            type: 'smoothstep'
+        },
+        {
+            id: `e${pathConfigNodes[1].id}-${pathConfigNodes[3].id}`,
+            source: pathConfigNodes[1].id,
+            target: pathConfigNodes[3].id,
+            type: 'smoothstep'
+        },
+        {
+            id: `e${pathConfigNodes[2].id}-${bellowNodeId}`,
+            source: pathConfigNodes[2].id,
             target: bellowNodeId,
             type: 'smoothstep'
         },
         {
-            id: `e${newPathNodes[1].id}-${bellowNodeId}`,
-            source: newPathNodes[1].id,
+            id: `e${pathConfigNodes[3].id}-${bellowNodeId}`,
+            source: pathConfigNodes[3].id,
             target: bellowNodeId,
             type: 'smoothstep'
         }
     ]);
 
     const createNewIfConditionNodes = (pathId: string) => {
-        const main = document.getElementsByClassName('react-flow')[0];
-        const pathWidth = main.clientWidth;
         const ifNode = {
             id: `if_${Math.random()}`,
             type: 'if',
@@ -87,53 +108,74 @@ export default function ReactFlowRenderer(): ReactElement {
                 label: 'IF',
                 isInFlow: true,
                 path: pathId,
-                nodeWidth: 50
+                nodeWidth: IF_NODE_WIDTH
             },
             position: { x: 0, y: 0 }
         } as Node<INodeData>;
-        const path1 = {
+        const pathConfig1 = {
             id: `path${pathId}.1.${Math.random()}`,
-            type: 'path',
+            type: 'pathConfig',
             data: {
-                label: 'IF',
+                label: 'Captured status, is equal to unchanged',
                 isInFlow: true,
                 path: pathId,
-                nodeWidth: pathWidth / 2 - PATH_MARGIN * 2
+                nodeWidth: PATH_CONFIG_NODE_WIDTH
             },
             position: { x: 0, y: 0 }
         } as Node<INodeData>;
-        const path2 = {
+        const placeholder1 = {
+            id: `placeholder${pathId}.1.${Math.random()}`,
+            type: 'placeholder',
+            data: {
+                isInFlow: true,
+                path: pathId,
+                nodeWidth: PLACEHOLDER_NODE_WIDTH
+            },
+            position: { x: 0, y: 0 }
+        } as Node<INodeData>;
+        const pathConfig2 = {
             id: `path${pathId}.2.${Math.random()}`,
-            type: 'path',
+            type: 'pathConfig',
             data: {
-                label: 'IF',
+                label: 'Other / else',
                 isInFlow: true,
                 path: pathId,
-                nodeWidth: pathWidth / 2 - PATH_MARGIN * 2
+                nodeWidth: PATH_CONFIG_NODE_WIDTH
             },
             position: { x: 0, y: 0 }
         } as Node<INodeData>;
-        return [ifNode, path1, path2];
+        const placeholder2 = {
+            id: `placeholder${pathId}.2.${Math.random()}`,
+            type: 'placeholder',
+            data: {
+                isInFlow: true,
+                path: pathId,
+                nodeWidth: PLACEHOLDER_NODE_WIDTH
+            },
+            position: { x: 0, y: 0 }
+        } as Node<INodeData>;
+        return [ifNode, pathConfig1, pathConfig2, placeholder1, placeholder2];
     };
 
-    const createNewPathConnections = (nodeAboveIndex: number, nodeBelowIndex: number, ifNode: Node<INodeData>, pathNodes: Node<INodeData>[]) => {
+    const createNewPathConnections = (nodeAboveIndex: number, nodeBelowIndex: number, ifNode: Node<INodeData>, pathConfigNodes: Node<INodeData>[]) => {
         const aboveNodeId = elements[nodeAboveIndex].id;
         const bellowNodeId = elements[nodeBelowIndex].id;
         const remainingEdges = edges.filter(edge => edge.source !== aboveNodeId || bellowNodeId !== edge.target);
-        const newEdges = getNewPathEdges(aboveNodeId, bellowNodeId, ifNode, pathNodes);
+        const newEdges = getNewPathEdges(aboveNodeId, bellowNodeId, ifNode, pathConfigNodes);
+        console.log({ newEdges });
         return [...remainingEdges, ...newEdges];
     };
 
     const addIfNode = (e: React.MouseEvent<Element, MouseEvent>) => {
         const pathId = getPathId(e.clientX, e.clientY);
-        const [ifNode, ...pathNodes] = createNewIfConditionNodes(pathId);
+        const [ifNode, path1, path2, placeholder1, placeholder2] = createNewIfConditionNodes(pathId);
         const { nodeAboveIndex, nodeBelowIndex } = getSurroundingNodesIndex(e.clientX, e.clientY, pathId);
         if (nodeAboveIndex === -1 || nodeBelowIndex === -1) {
             console.log('DROP FAILED');
             return;
         }
-        const newNodes = [...nodes, ifNode, ...pathNodes];
-        const newConnections = createNewPathConnections(nodeAboveIndex, nodeBelowIndex, ifNode, pathNodes);
+        const newNodes = [...nodes, ifNode, path1, path2, placeholder1, placeholder2];
+        const newConnections = createNewPathConnections(nodeAboveIndex, nodeBelowIndex, ifNode, [path1, path2, placeholder1, placeholder2]);
         const layoutedElements = getLayoutedElements(newNodes, newConnections);
         setNodes(newNodes);
         setEdges(newConnections);
@@ -210,7 +252,6 @@ export default function ReactFlowRenderer(): ReactElement {
 
     const createNewWidgetNode = (type: string, pathId: string) => {
         const main = document.getElementsByClassName('react-flow')[0];
-        const pathWidth = main.clientWidth;
 
         const newNode = {
             id: `dndnode_${Math.random()}`,
@@ -220,12 +261,10 @@ export default function ReactFlowRenderer(): ReactElement {
                 label: `${type} node`,
                 isInFlow: true,
                 path: pathId,
-                nodeWidth: pathWidth
-            },
-            style: {
-                width: '100%'
+                nodeWidth: TASK_NODE_WIDTH
             }
         } as Node<INodeData>;
+        console.log('new node: ', newNode);
         return newNode;
     }
 
@@ -300,20 +339,9 @@ export default function ReactFlowRenderer(): ReactElement {
         const newConnections = createNewNodeConnections(nodeAboveIndex, nodeBelowIndex, newNode);
         const newNodes = [...nodes, newNode];
         const layoutedElements = getLayoutedElements(newNodes, newConnections);
-        // console.log('layoutedElements: ', layoutedElements);
         setNodes(newNodes);
         setEdges(newConnections);
         setElements(layoutedElements);
-        // const elementAboveIndex = getElementAboveIndex(event.clientX, event.clientY);
-        // const newNode = createNewWidgetNode(type);
-        // if (!newNode) {
-        //     return;
-        // }
-        // const newConnections = createNewNodeConnections(elementAboveIndex, newNode)
-        // const newNodes = getNodesWithNewPositions(elementAboveIndex + 1, [newNode]);
-        // setNodes(newNodes);
-        // setEdges(newConnections);
-        // setElements([...newNodes, ...newConnections]);
     };
 
     const onDragOver = (event: React.DragEvent<HTMLDivElement>) => {
@@ -328,13 +356,18 @@ export default function ReactFlowRenderer(): ReactElement {
     const getLayoutedElements  = (nodes: Node<INodeData>[], edges: Edge[]) => {
         const graph = new dagre.graphlib.Graph({ compound: true });
         graph.setDefaultEdgeLabel(() => ({}));
-        graph.setGraph({ rankdir: 'TB', ranksep: 70 });
+        graph.setGraph({
+            rankdir: 'TB',
+            // nodesep: 60,
+            align: 'UL'
+            // ranksep: 40
+        });
         let parentId = '';
         if (!graph) {
             return [];
         }
         nodes.forEach(el => {
-            graph.setNode(el.id, { width: el.data?.nodeWidth, height: WIDGET_HEIGHT, label: el.id });
+            graph.setNode(el.id, { width: el.data?.nodeWidth, height: el.type === 'pathConfig' ? 56 : TASK_NODE_HEIGHT, label: el.id });
             if (el.data && el.data?.path !== MAIN_PATH_ID) {
                 graph.setParent(el.id, el.data.path);
                 parentId = el.data.path;
@@ -348,19 +381,21 @@ export default function ReactFlowRenderer(): ReactElement {
         });
         dagre.layout(graph);
 
-        const mostLeftOnRight = nodes.reduce((acc, val) => {
-            if (val.id.startsWith('r')) {
-                return acc;
-            }
-            const elX = graph.node(val.id).x;
-            return elX > acc ? elX : acc;
-        }, 0);
+        // const mostLeftOnRight = nodes.reduce((acc, val) => {
+        //     if (val.id.startsWith('r')) {
+        //         return acc;
+        //     }
+        //     const elX = graph.node(val.id).x;
+        //     return elX > acc ? elX : acc;
+        // }, 0);
 
-        console.log('mostLeftOnRight, ', mostLeftOnRight); 
+        // console.log('mostLeftOnRight, ', mostLeftOnRight); 
 
-        const start = graph.node('start').x;
-        console.log('start: ', start);
-        const move = mostLeftOnRight - start + 400;
+        console.log(graph);
+
+        // const start = graph.node('start').x;
+        // console.log('start: ', start);
+        // const move = mostLeftOnRight - start + 400;
 
         const mostChars = nodes.reduce((acc, val) => {
             if (val.id.startsWith('r')) {
@@ -385,7 +420,7 @@ export default function ReactFlowRenderer(): ReactElement {
                 if (isNode(el)) {
                     el.position = {
                         x: el.id.startsWith('l')
-                        ? nodeWithPosition.x - move // + ((mostChars - el.id.length) * 225)
+                        ? nodeWithPosition.x // - move // + ((mostChars - el.id.length) * 225)
                         : nodeWithPosition.x - (el.data ? el.data?.nodeWidth / 2 : 100 / 2) + Math.random() / 1000,
                         // x: nodeWithPosition.x - nodeWithPosition.width / 2 + Math.random() / 1000,
                         y: nodeWithPosition.y
@@ -406,16 +441,20 @@ export default function ReactFlowRenderer(): ReactElement {
             {showWorkflowOptions && <Options position={optionsStyles} onOptionSelect={onOptionSelect} />}
             <div className="react-flow-area" ref={reactFlowWrapper}>
                 <ReactFlow
+                    className="react-flow-wrapper"
                     zoomOnDoubleClick={false}
                     zoomOnScroll={false}
                     elements={elements}
                     nodeTypes={{
                         custom: CustomNode,
+                        initial: InitialNode,
                         path: FlowPath,
                         if: IfNode,
                         loop: LoopNode,
-                        widget1: Widget1,
-                        widget2: Widget2
+                        task1: Task1,
+                        task2: Task2,
+                        pathConfig: PathConfig,
+                        placeholder: Placeholder
                     }}
                     edgeTypes={{
                         custom: CustomEdge

@@ -1,6 +1,6 @@
 import React, { ReactElement } from 'react'
 import { Handle, Position } from 'react-flow-renderer';
-import { CustomNodeProps } from '../../interfaces/interfaces';
+import { CustomNodeProps } from '../../../interfaces/interfaces';
 import './if-node.scss';
 
 export default function IfNode({ data, id }: CustomNodeProps): ReactElement {
@@ -14,8 +14,14 @@ export default function IfNode({ data, id }: CustomNodeProps): ReactElement {
                 position={Position.Top}
             />
             <Handle
+                id="1"
                 type="source"
                 position={Position.Bottom}
+            />
+            <Handle
+                id="2"
+                type="source"
+                position={Position.Right}
             />
         </div>
     );
