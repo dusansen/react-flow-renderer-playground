@@ -62,6 +62,7 @@ export default function ReactFlowRenderer(): ReactElement {
     const [edges, setEdges] = useState<Edge[]>(EDGES);
     const [elements, setElements] = useState<Elements>([]);
     const previousPlaceholder = useRef<Node<INodeData> | undefined>();
+    const [placeholderForOptions, setPlaceholderForOptions] = useState<Node<INodeData> | undefined>();
 
     const getNewPathEdges = (
         aboveNodeId: string,
@@ -170,28 +171,99 @@ export default function ReactFlowRenderer(): ReactElement {
             },
             position: { x: 0, y: 0 }
         } as Node<INodeData>;
-        return [ifNode, pathConfig1, pathConfig2, placeholder1, placeholder2];
+        const placeholder3 = {
+            id: `placeholder${pathId}.3.${Math.random()}`,
+            type: 'placeholder',
+            data: {
+                isInFlow: true,
+                path: pathId,
+                nodeWidth: PLACEHOLDER_NODE_WIDTH
+            },
+            position: { x: 0, y: 0 }
+        } as Node<INodeData>;
+        return [ifNode, pathConfig1, pathConfig2, placeholder1, placeholder2, placeholder3];
     };
 
-    const createNewPathConnections = (nodeAboveIndex: number, nodeBelowIndex: number, ifNode: Node<INodeData>, pathConfigNodes: Node<INodeData>[]) => {
-        const aboveNodeId = elements[nodeAboveIndex].id;
-        const bellowNodeId = elements[nodeBelowIndex].id;
-        const remainingEdges = edges.filter(edge => edge.source !== aboveNodeId || bellowNodeId !== edge.target);
-        const newEdges = getNewPathEdges(aboveNodeId, bellowNodeId, ifNode, pathConfigNodes);
-        console.log({ newEdges });
-        return [...remainingEdges, ...newEdges];
+    const createNewPathConnections = (placeholder: Node<INodeData>, ifNode: Node<INodeData>, pathConfigNodes: Node<INodeData>[]) => {
+        const nodeBelowPlaceholderId = edges.find(edge => edge.source === placeholder?.id)?.target;
+        const edgesUpdated = edges.map(edge => {
+            if (edge.source !== placeholder?.id && edge.target !== placeholder?.id) {
+                return edge;
+            }
+            if (edge.source === placeholder?.id) {
+                edge.target = ifNode.id;
+            }
+            edge.id = `e${edge.source}-${edge.target}`;
+            return edge;
+        });
+        const newIfConnections = [
+            {
+                id: `e${placeholder.id}-${ifNode.id}`,
+                source: placeholder.id,
+                target: ifNode.id,
+                type: 'smoothstep'
+            },
+            {
+                id: `e${ifNode.id}-${pathConfigNodes[0].id}`,
+                source: ifNode.id,
+                sourceHandle: '1', 
+                target: pathConfigNodes[0].id,
+                type: 'smoothstep'
+            },
+            {
+                id: `e${ifNode.id}-${pathConfigNodes[1].id}`,
+                source: ifNode.id,
+                sourceHandle: '2', 
+                target: pathConfigNodes[1].id,
+                type: 'smoothstep'
+            },
+            {
+                id: `e${pathConfigNodes[0].id}-${pathConfigNodes[2].id}`,
+                source: pathConfigNodes[0].id,
+                target: pathConfigNodes[2].id,
+                type: 'smoothstep'
+            },
+            {
+                id: `e${pathConfigNodes[1].id}-${pathConfigNodes[3].id}`,
+                source: pathConfigNodes[1].id,
+                target: pathConfigNodes[3].id,
+                type: 'smoothstep'
+            },
+            {
+                id: `e${pathConfigNodes[2].id}-${pathConfigNodes[4].id}`,
+                source: pathConfigNodes[2].id,
+                target: pathConfigNodes[4].id,
+                type: 'smoothstep'
+            },
+            {
+                id: `e${pathConfigNodes[3].id}-${pathConfigNodes[4].id}`,
+                source: pathConfigNodes[3].id,
+                target: pathConfigNodes[4].id,
+                type: 'smoothstep'
+            },
+            {
+                id: `e${pathConfigNodes[4].id}-${nodeBelowPlaceholderId}`,
+                source: pathConfigNodes[4].id,
+                target: nodeBelowPlaceholderId,
+                type: 'smoothstep'
+            }
+        ] as Edge<any>[];
+        return [...edgesUpdated, ...newIfConnections];
     };
 
     const addIfNode = (e: React.MouseEvent<Element, MouseEvent>) => {
         const pathId = getPathId(e.clientX, e.clientY);
-        const [ifNode, path1, path2, placeholder1, placeholder2] = createNewIfConditionNodes(pathId);
+        
+        const [ifNode, path1, path2, placeholder1, placeholder2, placeholder3] = createNewIfConditionNodes(pathId);
         const { nodeAboveIndex, nodeBelowIndex } = getSurroundingNodesIndex(e.clientX, e.clientY, pathId);
         if (nodeAboveIndex === -1 || nodeBelowIndex === -1) {
             console.log('DROP FAILED');
             return;
         }
-        const newNodes = [...nodes, ifNode, path1, path2, placeholder1, placeholder2];
-        const newConnections = createNewPathConnections(nodeAboveIndex, nodeBelowIndex, ifNode, [path1, path2, placeholder1, placeholder2]);
+        const placeholder = placeholderForOptions as Node<INodeData>;
+        const newNodes = [...nodes, ifNode, path1, path2, placeholder1, placeholder2, placeholder3];
+        const newConnections = createNewPathConnections(placeholder, ifNode, [path1, path2, placeholder1, placeholder2, placeholder3]);
+        console.log({ newConnections });
         const layoutedElements = getLayoutedElements(newNodes, newConnections);
         setNodes(newNodes);
         setEdges(newConnections);
@@ -305,6 +377,7 @@ export default function ReactFlowRenderer(): ReactElement {
                 y: e.clientY
             });
             setShowWorkflowOptions(true);
+            setPlaceholderForOptions(element as Node<INodeData>);
         }
         if(isEdge(element)) {
             // setOptionsStyles({
@@ -393,7 +466,7 @@ export default function ReactFlowRenderer(): ReactElement {
                 target: newPlaceholder.id,
                 type: 'smoothstep'
             }
-        ]
+        ];
         return [...updatedConnections, ...connectionsWithNewTaskNode];
     };
 
