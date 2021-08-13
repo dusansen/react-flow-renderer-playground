@@ -49,7 +49,8 @@ interface INodeData {
     label: string;
     path: string;
     isInFlow?: boolean;
-    nodeWidth: number
+    nodeWidth: number,
+    hovered?: boolean
 };
 
 export default function ReactFlowRenderer(): ReactElement {
@@ -60,6 +61,7 @@ export default function ReactFlowRenderer(): ReactElement {
     const [nodes, setNodes] = useState<Node<INodeData>[]>(NODES);
     const [edges, setEdges] = useState<Edge[]>(EDGES);
     const [elements, setElements] = useState<Elements>([]);
+    const previousPlaceholder = useRef<Node<INodeData> | undefined>();
 
     const getNewPathEdges = (
         aboveNodeId: string,
@@ -435,6 +437,41 @@ export default function ReactFlowRenderer(): ReactElement {
     };
 
     const onDragOver = (event: React.DragEvent<HTMLDivElement>) => {
+        const projected = reactFlowInstance?.project({x: event.clientX, y: event.clientY });
+        const placeholder = findPlaceholderNode(projected?.x || 0, projected?.y || 0) as Node<INodeData>;
+        if (placeholder && placeholder.data) {
+            previousPlaceholder.current = placeholder;
+            const tempNodes = nodes.map(node => {
+                if (node.id !== placeholder.id) {
+                    return node;
+                }
+                return {
+                    ...node,
+                    data: {
+                        ...node.data,
+                        hovered: true
+                    }
+                }
+            }) as Node<INodeData>[];
+            const elements = getLayoutedElements(tempNodes, edges);
+            setElements(elements);
+        } else if (previousPlaceholder.current?.data) {
+            const tempNodes = nodes.map(node => {
+                if (node.id !== previousPlaceholder.current?.id) {
+                    return node;
+                }
+                return {
+                    ...node,
+                    data: {
+                        ...node.data,
+                        hovered: false
+                    }
+                }
+            }) as Node<INodeData>[];
+            const elements = getLayoutedElements(tempNodes, edges);
+            setElements(elements);
+            previousPlaceholder.current = undefined;
+        }
         event.preventDefault();
         event.dataTransfer.dropEffect = 'move';
     };
