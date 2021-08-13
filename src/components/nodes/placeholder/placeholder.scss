@@ -1,8 +1,15 @@
 .placeholder {
   background-color: #29ABE2;
-  width: 30px;
-  height: 30px;
+  width: 16px;
+  height: 16px;
   border-radius: 50%;
+  cursor: default;
+
+  &:hover {
+    -webkit-box-shadow: 0px 0px 0px 5px rgba(41,171,226,0.69);
+    -moz-box-shadow: 0px 0px 0px 5px rgba(41,171,226,0.69);
+    box-shadow: 0px 0px 0px 5px rgba(41,171,226,0.69);
+  }
 
   .react-flow__handle {
     background-color: #29ABE2;
@@ -10,10 +17,12 @@
   }
 
   .react-flow__handle-top {
-    background: red;
+      transform: translate(-3px, 4px);
+      background-color: #29ABE2;
   }
 
   .react-flow__handle-bottom {
-    background: green;
+      transform: translate(-3px, -4px);
+      background-color: #29ABE2;
   }
 }

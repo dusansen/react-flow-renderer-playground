@@ -5,7 +5,12 @@ import './placeholder.scss'
 
 export default function Placeholder({ data, showConnectionDots = true, onDragStart }: CustomNodeProps): ReactElement {
     return (
-        <div draggable={!data.isInFlow} className='placeholder' onDragStart={event => onDragStart(event, 'placeholder')}>
+        <div
+            draggable={!data.isInFlow}
+            className='placeholder'
+            onClick={data.onClick}
+            onDragStart={event => onDragStart(event, 'placeholder')}
+        >
             {showConnectionDots && (
                 <>
                     <Handle

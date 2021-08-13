@@ -1,8 +1,5 @@
 import React, { ReactElement, useState, useRef, useEffect } from 'react'
 import ReactFlow, { Background, MiniMap, Controls, FlowElement, OnLoadParams, Edge, isEdge, Connection, Node, Elements, getIncomers, isNode, BackgroundVariant } from 'react-flow-renderer';
-import CustomEdge from '../../components/custom-edge/CustomEdge';
-import CustomNode from '../../components/custom-node/CustomNode';
-import FlowPath from '../../components/flow-path/FlowPath';
 import IfNode from '../../components/nodes/if-node/IfNode';
 import LoopNode from '../../components/loop-node/LoopNode';
 import Options from '../../components/options/Options';
@@ -21,12 +18,30 @@ import Placeholder from '../../components/nodes/placeholder/Placeholder';
 
 const TASK_NODE_WIDTH = 400;
 const TASK_NODE_HEIGHT = 96;
-const IF_NODE_WIDTH = 40;
-const IF_NODE_HEIGHT = 40;
+const IF_NODE_WIDTH = 56;
 const CURSOR_HEIGHT = 20;
-const PATH_MARGIN = 20;
-const PATH_CONFIG_NODE_WIDTH = 100;
-const PLACEHOLDER_NODE_WIDTH = 5;
+const CURSOR_WIDTH = 20;
+const PATH_CONFIG_NODE_WIDTH = 110;
+const PLACEHOLDER_NODE_WIDTH = 16;
+const NODE_AREA = 40;
+
+const getHeightForNodeType = (type: string | undefined) => {
+    switch (type) {
+        case 'task1':
+        case 'task2':
+            return 98;
+        case 'initial':
+            return 42;
+        case 'if':
+            return 56;
+        case 'pathConfig':
+            return 56;
+        case 'placeholder':
+            return 16;
+        default:
+            return 96;
+    }
+};
 
 const MAIN_PATH_ID = '1';
 
@@ -39,7 +54,6 @@ interface INodeData {
 
 export default function ReactFlowRenderer(): ReactElement {
     const reactFlowWrapper = useRef<HTMLDivElement>(null);
-    const [clickEdgeNodes, setClickEdgeNodes] = useState<string[]>([]);
     const [showWorkflowOptions, setShowWorkflowOptions] = useState(false);
     const [optionsStyles, setOptionsStyles] = useState({ x: 0, y: 0 });
     const [reactFlowInstance, setReactFlowInstance] = useState<OnLoadParams<any> | null>(null);
@@ -251,8 +265,6 @@ export default function ReactFlowRenderer(): ReactElement {
     };
 
     const createNewWidgetNode = (type: string, pathId: string) => {
-        const main = document.getElementsByClassName('react-flow')[0];
-
         const newNode = {
             id: `dndnode_${Math.random()}`,
             type,
@@ -268,18 +280,37 @@ export default function ReactFlowRenderer(): ReactElement {
         return newNode;
     }
 
+    const createPlaceholderNode = (id?: string) => {
+        const placeholder  ={
+            id: id || `placeholder_${Math.random()}`,
+            type: 'placeholder',
+            position: { x: 0, y: 0 },
+            data: {
+                isInFlow: true,
+                path: 'placeholder',
+                nodeWidth: PLACEHOLDER_NODE_WIDTH
+            },
+        } as Node<INodeData>;
+        return placeholder;
+    }
+
     const clickHandler = (e: React.MouseEvent<Element, MouseEvent>, element: FlowElement<any>) => {
         console.log('clickHandler element: ', element);
-        if(isNode(element)) {
-            console.log('incomers: ', getIncomers(element, elements));
-        }
-        if(isEdge(element)) {
+        if(isNode(element) && element.type === 'placeholder') {
+            // console.log('incomers: ', getIncomers(element, elements));
             setOptionsStyles({
                 x: e.clientX,
                 y: e.clientY
             });
             setShowWorkflowOptions(true);
-            setClickEdgeNodes([element.source, element.target]);
+        }
+        if(isEdge(element)) {
+            // setOptionsStyles({
+            //     x: e.clientX,
+            //     y: e.clientY
+            // });
+            // setShowWorkflowOptions(true);
+            // setClickEdgeNodes([element.source, element.target]);
         }
         return e;
     };
@@ -320,28 +351,87 @@ export default function ReactFlowRenderer(): ReactElement {
         return pathId || MAIN_PATH_ID;
     }
 
+    const findPlaceholderNode = (x: number, y: number) => {
+        return nodes.find(node => {
+            return node.type === 'placeholder'
+                && node.position.x - NODE_AREA <= x
+                && node.position.x + (node.data?.nodeWidth || 0) + NODE_AREA >= x
+                && node.position.y - NODE_AREA <= y 
+                && node.position.y + 16 + NODE_AREA >= y 
+        });
+    }
+
+    const getConnectionsAfterDrop = (
+        edges: Edge[],
+        placeholder: Node<INodeData>,
+        newPlaceholder: Node<INodeData>,
+        newTaskNode: Node<INodeData>
+    ) => {
+        console.log('updated cons: ', edges);
+        const updatedConnections = edges.map(edge => {
+            if (edge.source !== placeholder?.id && edge.target !== placeholder?.id) {
+                return edge;
+            }
+            if (edge.source === placeholder?.id) {
+                edge.source = newPlaceholder.id;
+            }
+            edge.id = `e${edge.source}-${edge.target}`;
+            return edge;
+        });
+        const connectionsWithNewTaskNode = [
+            {
+                id: `e${placeholder.id}-${newTaskNode.id}`,
+                source: placeholder.id,
+                target: newTaskNode.id,
+                type: 'smoothstep'
+            },
+            {
+                id: `e${newTaskNode.id}-${newPlaceholder.id}`,
+                source: newTaskNode.id,
+                target: newPlaceholder.id,
+                type: 'smoothstep'
+            }
+        ]
+        return [...updatedConnections, ...connectionsWithNewTaskNode];
+    };
+
     const onDrop = (event: React.DragEvent<HTMLDivElement>) => {
-        event.preventDefault();
         const type = event.dataTransfer.getData('application/reactflow');
-        if (!type) {
-            return;
-        }
-        console.log('ondrop: ', event.clientX, event.clientY, reactFlowInstance);
         const projected = reactFlowInstance?.project({x: event.clientX, y: event.clientY });
-        const pathId = getPathId(projected?.x || 0, projected?.y || 0);
-        // console.log('onDrop pathId: ', pathId);
-        const { nodeAboveIndex, nodeBelowIndex } = getSurroundingNodesIndex(projected?.x || 0, projected?.y || 0, pathId);
-        if (nodeAboveIndex === -1 || nodeBelowIndex === -1) {
-            console.log('DROP FAILED');
+        const placeholder = findPlaceholderNode(projected?.x || 0, projected?.y || 0) as Node<INodeData>;
+        if (!type || !placeholder) {
             return;
         }
-        const newNode = createNewWidgetNode(type, pathId);
-        const newConnections = createNewNodeConnections(nodeAboveIndex, nodeBelowIndex, newNode);
-        const newNodes = [...nodes, newNode];
+        const pathId = getPathId(projected?.x || 0, projected?.y || 0);
+        const newTaskNode = createNewWidgetNode(type, pathId);
+        const newPlaceholderNode = createPlaceholderNode();
+        const newConnections = getConnectionsAfterDrop(edges, placeholder, newPlaceholderNode, newTaskNode) as Edge<any>[];
+        const newNodes = [...nodes, newTaskNode, newPlaceholderNode];
         const layoutedElements = getLayoutedElements(newNodes, newConnections);
         setNodes(newNodes);
         setEdges(newConnections);
         setElements(layoutedElements);
+        // event.preventDefault();
+        // const type = event.dataTransfer.getData('application/reactflow');
+        // if (!type) {
+        //     return;
+        // }
+        // console.log('ondrop: ', event.clientX, event.clientY, reactFlowInstance);
+        // const projected = reactFlowInstance?.project({x: event.clientX, y: event.clientY });
+        // const pathId = getPathId(projected?.x || 0, projected?.y || 0);
+        // // console.log('onDrop pathId: ', pathId);
+        // const { nodeAboveIndex, nodeBelowIndex } = getSurroundingNodesIndex(projected?.x || 0, projected?.y || 0, pathId);
+        // if (nodeAboveIndex === -1 || nodeBelowIndex === -1) {
+        //     console.log('DROP FAILED');
+        //     return;
+        // }
+        // const newNode = createNewWidgetNode(type, pathId);
+        // const newConnections = createNewNodeConnections(nodeAboveIndex, nodeBelowIndex, newNode);
+        // const newNodes = [...nodes, newNode];
+        // const layoutedElements = getLayoutedElements(newNodes, newConnections);
+        // setNodes(newNodes);
+        // setEdges(newConnections);
+        // setElements(layoutedElements);
     };
 
     const onDragOver = (event: React.DragEvent<HTMLDivElement>) => {
@@ -358,20 +448,16 @@ export default function ReactFlowRenderer(): ReactElement {
         graph.setDefaultEdgeLabel(() => ({}));
         graph.setGraph({
             rankdir: 'TB',
-            // nodesep: 60,
-            align: 'UL'
-            // ranksep: 40
+            align: 'UL',
+            // nodesep: 20,
+            ranksep: 30
         });
         let parentId = '';
         if (!graph) {
             return [];
         }
         nodes.forEach(el => {
-            graph.setNode(el.id, { width: el.data?.nodeWidth, height: el.type === 'pathConfig' ? 56 : TASK_NODE_HEIGHT, label: el.id });
-            if (el.data && el.data?.path !== MAIN_PATH_ID) {
-                graph.setParent(el.id, el.data.path);
-                parentId = el.data.path;
-            }
+            graph.setNode(el.id, { width: el.data?.nodeWidth, height: getHeightForNodeType(el.type), label: el.id });
         });
         edges.forEach(el => {
             if (el.target === parentId || el.source === parentId) {
@@ -380,50 +466,22 @@ export default function ReactFlowRenderer(): ReactElement {
             graph.setEdge(el.source, el.target, { label: el.id })
         });
         dagre.layout(graph);
-
-        // const mostLeftOnRight = nodes.reduce((acc, val) => {
-        //     if (val.id.startsWith('r')) {
-        //         return acc;
-        //     }
-        //     const elX = graph.node(val.id).x;
-        //     return elX > acc ? elX : acc;
-        // }, 0);
-
-        // console.log('mostLeftOnRight, ', mostLeftOnRight); 
-
-        console.log(graph);
-
-        // const start = graph.node('start').x;
-        // console.log('start: ', start);
-        // const move = mostLeftOnRight - start + 400;
-
-        const mostChars = nodes.reduce((acc, val) => {
-            if (val.id.startsWith('r')) {
-                return acc;
-            }
-            if (val.id.length > acc) {
-                return val.id.length;
-            }
-            return acc;
-        }, 1);
-        console.log('mostChars: ', mostChars);
+        console.log({ graph })
 
         return [...nodes, ...edges].map(el => {
             if (isNode(el)) {
-                const nodeWithPosition = graph.node(el.id);
+                const { width, height, x, y} = graph.node(el.id);
                 if (el.type === 'path') {
                     el.style = {
-                        width: nodeWithPosition.width,
-                        height: nodeWithPosition.height
+                        width: width,
+                        height: height
                     };
                 }
                 if (isNode(el)) {
+                    const nodeWidth = el.data?.nodeWidth || 0;
                     el.position = {
-                        x: el.id.startsWith('l')
-                        ? nodeWithPosition.x // - move // + ((mostChars - el.id.length) * 225)
-                        : nodeWithPosition.x - (el.data ? el.data?.nodeWidth / 2 : 100 / 2) + Math.random() / 1000,
-                        // x: nodeWithPosition.x - nodeWithPosition.width / 2 + Math.random() / 1000,
-                        y: nodeWithPosition.y
+                        x: el.type !== 'task1' ? x + (400 - nodeWidth)/2 : x,
+                        y: y - getHeightForNodeType(el.type) / 2
                     }
                 }
             }
@@ -446,18 +504,13 @@ export default function ReactFlowRenderer(): ReactElement {
                     zoomOnScroll={false}
                     elements={elements}
                     nodeTypes={{
-                        custom: CustomNode,
                         initial: InitialNode,
-                        path: FlowPath,
                         if: IfNode,
                         loop: LoopNode,
                         task1: Task1,
                         task2: Task2,
                         pathConfig: PathConfig,
                         placeholder: Placeholder
-                    }}
-                    edgeTypes={{
-                        custom: CustomEdge
                     }}
                     onElementClick={clickHandler}
                     onLoad={onLoadHandler}
