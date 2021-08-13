@@ -27,7 +27,7 @@ export default function Placeholder({ data, showConnectionDots = true, onDragSta
                 </>
             )}
         </div>
-        {data.hovered&& <div style={{ position: 'absolute', top: -8, left: -192, backgroundColor: 'red', height: '40px', width: '400px' }}>test</div>}
+        {data.hovered&& <div style={{ position: 'absolute', top: -8, left: -192, backgroundColor: 'rgba(41, 171, 226, 0.3)', height: '40px', width: '400px' }} />}
         </>
     )
 }
